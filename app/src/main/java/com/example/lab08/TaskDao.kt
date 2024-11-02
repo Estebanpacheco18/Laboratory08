@@ -9,7 +9,6 @@ import androidx.room.Update
 @Dao
 interface TaskDao {
 
-
     // Obtener todas las tareas
     @Query("SELECT * FROM tasks")
     suspend fun getAllTasks(): List<Task>
