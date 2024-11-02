@@ -10,7 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.room.Room
-import kotlinx.coroutines.launch
 import com.example.lab08.ui.theme.Lab08Theme
 
 class MainActivity : ComponentActivity() {
@@ -41,7 +40,8 @@ fun TaskScreen(viewModel: TaskViewModel) {
     val tasks by viewModel.tasks.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     var newTaskDescription by remember { mutableStateOf("") }
-
+    var isEditing by remember { mutableStateOf(false) }
+    var taskToEdit by remember { mutableStateOf<Task?>(null) }
 
     Column(
         modifier = Modifier
@@ -51,26 +51,31 @@ fun TaskScreen(viewModel: TaskViewModel) {
         TextField(
             value = newTaskDescription,
             onValueChange = { newTaskDescription = it },
-            label = { Text("Nueva tarea") },
+            label = { Text(if (isEditing) "Editar tarea" else "Nueva tarea") },
             modifier = Modifier.fillMaxWidth()
         )
-
 
         Button(
             onClick = {
                 if (newTaskDescription.isNotEmpty()) {
-                    viewModel.addTask(newTaskDescription)
+                    if (isEditing) {
+                        taskToEdit?.let {
+                            viewModel.updateTask(it.copy(description = newTaskDescription))
+                        }
+                        isEditing = false
+                        taskToEdit = null
+                    } else {
+                        viewModel.addTask(newTaskDescription)
+                    }
                     newTaskDescription = ""
                 }
             },
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
         ) {
-            Text("Agregar tarea")
+            Text(if (isEditing) "Guardar cambios" else "Agregar tarea")
         }
 
-
         Spacer(modifier = Modifier.height(16.dp))
-
 
         tasks.forEach { task ->
             Row(
@@ -78,18 +83,19 @@ fun TaskScreen(viewModel: TaskViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(text = task.description)
-                Button(onClick = { viewModel.toggleTaskCompletion(task) }) {
-                    Text(if (task.isCompleted) "Completada" else "Pendiente")
+                Row {
+                    Button(onClick = {
+                        isEditing = true
+                        taskToEdit = task
+                        newTaskDescription = task.description
+                    }) {
+                        Text("Editar")
+                    }
+                    Button(onClick = { viewModel.deleteTask(task) }) {
+                        Text("Eliminar")
+                    }
                 }
             }
-        }
-
-
-        Button(
-            onClick = { coroutineScope.launch { viewModel.deleteAllTasks() } },
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
-        ) {
-            Text("Eliminar todas las tareas")
         }
     }
 }
